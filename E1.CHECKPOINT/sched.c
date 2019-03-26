@@ -100,6 +100,9 @@ void task_switch(union task_union *t) {
 void inner_task_switch(union task_union *t) {
 	
 	tss.esp0 = (int)&(t->stack[KERNEL_STACK_SIZE]);
+	(&t->stack[KERNEL_STACK_SIZE], 0X175);
+	set_cr3(get_DIR(&t->task));
+	
 	
 	
 }
