@@ -17,7 +17,9 @@ struct task_struct *list_head_to_task_struct(struct list_head *l)
 #endif
 
 extern struct list_head blocked;
-
+extern struct list_head free_queue;
+extern struct list_head ready_queue;
+struct task_struct * idle_task;
 
 /* get_DIR - Returns the Page Directory address for task 't' */
 page_table_entry * get_DIR (struct task_struct *t) 
@@ -55,16 +57,40 @@ void cpu_idle(void)
 
 void init_idle (void)
 {
-
+	struct list_head *first = list_first(&free_queue);
+	list_del(first);
+	struct task_struct *p = list_head_to_task_struct(first);
+	p -> PID = 0;
+	allocate_DIR(p);
+	union task_union *tnew = (union task_union*)p;
+	tnew->stack[KERNEL_STACK_SIZE-1]=cpu_idle;
+	tnew->stack[KERNEL_STACK_SIZE-2]=0;
+	p->esp=&tnew->stack[KERNEL_STACK_SIZE-2];
+	
+	idle_task = p;
 }
 
 void init_task1(void)
 {
+	struct list_head *first = list_first(&free_queue);
+	list_del(first);
+	struct task_struct *p = list_head_to_task_struct(first);
+	p -> PID = 1;
+	allocate_DIR(p);
+	set_user_pages(p);
+	union task_union *nova = (union task_union*) p;
+	tss.esp0 = (DWord)&(nova -> stack[KERNEL_STACK_SIZE]);
+	(nova -> stack[KERNEL_STACK_SIZE], 0x175);
+	set_cr3(get_DIR(&nova->task));
 }
 
 
 void init_sched(){
-
+	INIT_LIST_HEAD( &free_queue );
+	for(i = 0; i < NR_TASK; ++i) {
+		list_add_tail(&(task[i].task.anchor), &free_queue);
+	}
+	INIT_LIST_HEAD( &ready_queue );
 }
 
 struct task_struct* current()
@@ -76,5 +102,15 @@ struct task_struct* current()
 	: "=g" (ret_value)
   );
   return (struct task_struct*)(ret_value&0xfffff000);
+}
+
+void task_switch(union task_union *t) {
+}
+
+void inner_task_switch(union task_union *t) {
+	tss.esp0 = (int)&(t->stack[KERNEL_STACK_SIZE]);
+	(&t->stack[KERNEL_STACK_SIZE], 0x175);
+	set_cr3(get_DIR(&t->task));
+	task_st(&current()->esp, t->task.esp);
 }
 
