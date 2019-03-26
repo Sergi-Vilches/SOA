@@ -20,7 +20,7 @@ retorn:
 	popl %edx
 	popl %ecx
 	popl %ebx
-	test %eax,%eax
+	cmp %eax, $0
 	js errore // %eax < 0
 	//movl %ebp, %esp
 	popl %ebp

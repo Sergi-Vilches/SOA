@@ -50,6 +50,7 @@ int sys_fork()
   return PID;
 }
 #define buff 512
+char sys_buffer[buff];
 int sys_write(int fd, char * buffer, int size)
 {
 	int ret;	
@@ -64,7 +65,7 @@ int sys_write(int fd, char * buffer, int size)
 
   //Copying data from user space to kernel space
   int bytes = size;
-  char sys_buffer[buff];
+  
   while(bytes > buff) {
 	copy_from_user(buffer,sys_buffer,size);
 	ret = sys_write_console(sys_buffer, buff);
