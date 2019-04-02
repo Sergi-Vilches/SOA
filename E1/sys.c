@@ -44,9 +44,21 @@ int sys_gettime() {
 int sys_fork()
 {
   int PID=-1;
+  if(list_empty(&free_queue)) return -12;
+  struct list_head *hijo = list_first(&free_queue);
+  list_del(hijo);
+  struct task_struct *fill_struct = list_head_to_task_struct(hijo);
+  union task_union *fill_union = (union task_union*)fill_struct;
+  //void copy_data(void *start, void *dest, int size)
+  copy_data (current(), fill_union, sizeof(union task_union));
+  allocate_DIR((struct task_struct*)fill_union);
+  page_table_entry *fill_page_table = get_PT((struct task_struct*)fill_struct);
+  int vframe[NUM_PAG_DATA];
+  for(int i = 0; i< NUM_PAG_DATA, ++i) {
+    vframe[i] = alloc_frame();
+  }
+  if (page == -1) 
 
-  // creates the child process
-  
   return PID;
 }
 #define buff 512
