@@ -97,3 +97,11 @@ retfork:
 	/* Continue after sysenter */
 	popl %ebp
 	ret
+
+ENTRY(exit) 
+	pushl %ebp
+	movl %esp, %ebp
+	movl $1, %eax
+	call sys_exit
+	popl %ebp
+	ret
