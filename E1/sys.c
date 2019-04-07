@@ -32,7 +32,9 @@ int sys_ni_syscall()
 {
 	return -38; /*ENOSYS*/
 }
-
+int ret_from_fork() {
+  return 0;
+}
 int sys_getpid()
 {
 	return current()->PID;
@@ -84,13 +86,18 @@ int sys_fork()
     del_ss_pag(parent_page_table, first_free_page+i);
   }
   set_cr3(get_DIR(current()));
-  child_task_struct->PID = ++PID_counter;
+  fill_struct->PID = ++PID_counter;
+
   int ebp;
   get_ebp(ebp);
   ebp = ebp - ((int)current()); //Diferencia entre ESP i current del pare i despres li sumem al current del fill
-	ebp += (int)(child_task_union); //ens posicionem on començen les dades del fill, que es el ESP del fill
-	child_task_union->task.esp = ebp; 
+	ebp += (int)(fill_union); //ens posicionem on començen les dades del fill, que es el ESP del fill
+	fill_union->task.esp = ebp; 
 
+  fill_union->stack[KERNEL_STACK_SIZE-NUM_PAG_DATA-2]=ret_from_fork;
+	fill_union->stack[KERNEL_STACK_SIZE-NUM_PAG_DATA-1]=ebp;
+
+  list_add(&(fill_union->task.list), &readyqueue);
   return PID;
 }
 #define buff 512
@@ -130,4 +137,13 @@ return result;
 
 void sys_exit()
 {  
+  void sys_exit()
+{  
+	page_table_entry *page_table = get_PT(current());
+	for (int i = 0; i < NUM_PAG_DATA; i++) {
+		free_frame(get_frame(page_table, PAG_LOG_INIT_DATA+i));
+		del_ss_pag(page_table, PAG_LOG_INIT_DATA+i);
+	}
+	list_add_tail(&(current()->list), &freequeue);
+	sched_next_rr();
 }

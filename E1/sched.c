@@ -113,4 +113,59 @@ void inner_task_switch(union task_union *t) {
 	set_cr3(get_DIR(&t->task));
 	task_st(&current()->esp, t->task.esp);
 }
+int quantumt = 0;
+void update_sched_data_rr(void) {
+	quantumt--;
+}
 
+int get_quantum(struct task_struct *t) {
+	return t->quantum;
+}
+
+void set_quantum(struct task_struct *t, int new_quantum) {
+	t->quantum=new_quantum;
+}
+
+int needs_sched_rr(void) {
+	if (quantumt == 0) {
+		if (list_empty(&ready_queue)) {
+			quantumt = current()-> quantum;
+			return 0;
+		}
+		else {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+void update_process_state_rr(struct task_struct *t, struct list_head *dst_queue) {
+	if (t->STATE != ST_RUN) list_del(&(t->list);
+	if (dst_queue != NULL) {
+		list_add(&(t->list), dst_queue); 
+		if (dst_queue == &readyqueue) t->state = ST_READY; 
+		else t->state = ST_BLOCKED; 
+	}
+	else t->state = ST_RUN;
+}
+
+void sched_next_rr() {
+	struct task_struct *next_task; 
+	if(list_empty(&readyqueue)) next_task = idle_task;	
+	else { 
+		struct list_head *lh = list_first(&readyqueue); 
+		next_task = list_head_to_task_struct(lh);	
+		list_del(lh);
+	}
+	quantum_total = get_quantum(next_task);
+	next_task->state = ST_RUN; 
+	task_switch((union task_union*)next_task); 
+}
+
+void schedule() {
+	update_sched_data_rr();
+	if (needs_sched_rr()) {
+		update_process_state_rr(current(), &readyqueue);
+		sched_next_rr();
+	}
+}
