@@ -133,6 +133,15 @@ ENTRY(writeMSR)
 	popl %ebp
 	ret
 	
+ENTRY(task_st) 
+    movl %ebp, 4(%esp)
+    movl 8(%esp), %esp
+    popl %ebp
+    ret
+
+ENTRY(get_ebp)
+	movl %ebp, 4(%esp)
+	ret
 	
 	
 

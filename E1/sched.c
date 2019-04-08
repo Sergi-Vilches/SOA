@@ -5,20 +5,26 @@
 #include <sched.h>
 #include <mm.h>
 #include <io.h>
+#include <libc.h>
 
 union task_union task[NR_TASKS]
   __attribute__((__section__(".data.task")));
 
 #if 0
-struct task_struct *list_head_to_task_struct(struct list_head *l)
+struct task_struct* list_head_to_task_struct(struct list_head *l)
 {
-  return list_entry( l, struct task_struct, list);
+  return list_entry(l, struct task_struct, list);
 }
 #endif
 
+struct task_struct* list_head_to_task_struct(struct list_head *l)
+{
+  return (struct task_struct*)((int)l&0xfffff000);
+}
+
 extern struct list_head blocked;
-extern struct list_head free_queue;
-extern struct list_head ready_queue;
+struct list_head free_queue;
+ struct list_head ready_queue;
 struct task_struct * idle_task;
 
 /* get_DIR - Returns the Page Directory address for task 't' */
@@ -87,7 +93,7 @@ void init_task1(void)
 
 void init_sched(){
 	INIT_LIST_HEAD( &free_queue );
-	for(i = 0; i < NR_TASK; ++i) {
+	for(int i = 0; i < NR_TASKS; ++i) {
 		list_add_tail(&(task[i].task.anchor), &free_queue);
 	}
 	INIT_LIST_HEAD( &ready_queue );
@@ -127,12 +133,12 @@ void set_quantum(struct task_struct *t, int new_quantum) {
 }
 
 int needs_sched_rr(void) {
-	if (quantumt == 0) {
-		if (list_empty(&ready_queue)) {
+	if(quantumt == 0) {
+		if(list_empty(&ready_queue)) {
 			quantumt = current()-> quantum;
 			return 0;
 		}
-		else {
+		else{
 			return 1;
 		}
 	}
@@ -140,32 +146,32 @@ int needs_sched_rr(void) {
 }
 
 void update_process_state_rr(struct task_struct *t, struct list_head *dst_queue) {
-	if (t->STATE != ST_RUN) list_del(&(t->list);
+	if (t->STATE != ST_RUN) list_del(&(t->anchor));
 	if (dst_queue != NULL) {
-		list_add(&(t->list), dst_queue); 
-		if (dst_queue == &readyqueue) t->state = ST_READY; 
-		else t->state = ST_BLOCKED; 
+		list_add(&(t->anchor), dst_queue); 
+		if (dst_queue == &ready_queue) t->STATE = ST_READY; 
+		else t->STATE = ST_BLOCKED; 
 	}
-	else t->state = ST_RUN;
+	else t->STATE = ST_RUN;
 }
 
 void sched_next_rr() {
 	struct task_struct *next_task; 
-	if(list_empty(&readyqueue)) next_task = idle_task;	
+	if(list_empty(&ready_queue)) next_task = idle_task;	
 	else { 
-		struct list_head *lh = list_first(&readyqueue); 
+		struct list_head *lh = list_first(&ready_queue); 
 		next_task = list_head_to_task_struct(lh);	
 		list_del(lh);
 	}
-	quantum_total = get_quantum(next_task);
-	next_task->state = ST_RUN; 
+	quantumt = get_quantum(next_task);
+	next_task->STATE = ST_RUN; 
 	task_switch((union task_union*)next_task); 
 }
 
 void schedule() {
 	update_sched_data_rr();
 	if (needs_sched_rr()) {
-		update_process_state_rr(current(), &readyqueue);
+		update_process_state_rr(current(), &ready_queue);
 		sched_next_rr();
 	}
 }

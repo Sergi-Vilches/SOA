@@ -18,9 +18,9 @@ struct task_struct {
   int PID;			/* Process ID. This MUST be the first field of the struct. */
   page_table_entry * dir_pages_baseAddr;
   struct list_head anchor;
-  int ebp;
+  int esp;
   int quantum;
-  int state;
+  int STATE;
 };
 
 union task_union {
@@ -35,6 +35,8 @@ extern union task_union task[NR_TASKS]; /* Vector de tasques */
 
 #define INITIAL_ESP       	KERNEL_ESP(&task[1])
 
+extern struct list_head free_queue;
+extern struct list_head ready_queue;
 /* Inicialitza les dades del proces inicial */
 void init_task1(void);
 
@@ -43,6 +45,8 @@ void init_idle(void);
 void init_sched(void);
 
 void inner_task_switch(union task_union *t);
+
+void task_st(int * save_sp, int new_sp);
 
 struct task_struct * current();
 

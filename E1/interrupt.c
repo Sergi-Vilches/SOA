@@ -99,8 +99,8 @@ void setIdt()
   writeMSR(syscall_handler_sysenter, 0x176);
 
   /* ADD INITIALIZATION CODE FOR INTERRUPT VECTOR */
-  setTrapHandler(0x80, system_call_handler, 3);
-  set_idt_reg(&idtR);
+  //setTrapHandler(0x80, system_call_handler, 3);
+ set_idt_reg(&idtR);
 }
 
 void keyboard_routine()

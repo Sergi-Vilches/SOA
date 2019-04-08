@@ -16,8 +16,3 @@ ENTRY(inner_task_switch)
     popl %ebx
     ret
 
-ENTRY (task_st) 
-    movl %ebp, 4(%esp)
-    movl 8(%esp), %esp
-    popl %ebp
-    ret

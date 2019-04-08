@@ -9,7 +9,6 @@
 #include <errno.h>
 
 #include <mm.h>
-
 #include <mm_address.h>
 
 #include <sched.h>
@@ -21,12 +20,16 @@
 //wrmsr(MSR_IA32_SYSENTER_ESP, tss->esp1, 0);
 //wrmsr(MSR_IA32_SYSENTER_EIP, (unsigned long) sysenter_entry, 0);
 
+
+void * get_ebp();
+
 int check_fd(int fd, int permissions)
 {
   if (fd!=1) return -9; /*EBADF*/
   if (permissions!=ESCRIPTURA) return -13; /*EACCES*/
   return 0;
 }
+
 
 int sys_ni_syscall()
 {
@@ -46,6 +49,7 @@ int sys_gettime() {
 int PID_counter = 1000;
 int sys_fork()
 {
+	
   int PID=-1;
   if(list_empty(&free_queue)) return -12; // EMONEM Not enough space 
   struct list_head *hijo = list_first(&free_queue);
@@ -57,10 +61,10 @@ int sys_fork()
   allocate_DIR((struct task_struct*)fill_union);
   page_table_entry *fill_page_table = get_PT((struct task_struct*)fill_struct);
   int vframe[NUM_PAG_DATA];
-  for(int i = 0; i< NUM_PAG_DATA, ++i) {
+  for(int i = 0; i< NUM_PAG_DATA; ++i) {
     vframe[i] = alloc_frame();
     if (vframe[i] == -1) {
-      for (int j = 0, j < i; ++j) {
+      for (int j = 0; j < i; ++j) {
         free_frame(vframe[j]);
       }
       list_add(hijo,&free_queue);
@@ -68,7 +72,7 @@ int sys_fork()
     }
   }
   for (int i = 0; i < NUM_PAG_DATA; ++i) {
-    set_ss_page(fill_page_table, PAG_LOG_INIT_DATA+i,vframe[i]);
+    set_ss_pag(fill_page_table, PAG_LOG_INIT_DATA+i,vframe[i]);
   }
   page_table_entry *pare_page_table = get_PT(current());
   for (int i=0; i<NUM_PAG_KERNEL; i++){
@@ -81,15 +85,15 @@ int sys_fork()
   int first_data_page = NUM_PAG_KERNEL + NUM_PAG_CODE;
 	int first_free_page = first_data_page + NUM_PAG_DATA;
   for (int i = first_data_page; i<first_free_page; i++) {
-    set_ss_pag(parent_page_table, first_free_page, get_frame(child_page_table, i));
+    set_ss_pag(pare_page_table, first_free_page, get_frame(fill_page_table, i));
     copy_data((void*)((first_data_page + i) * PAGE_SIZE), (void*)((first_free_page + i) * PAGE_SIZE), PAGE_SIZE);
-    del_ss_pag(parent_page_table, first_free_page+i);
+    del_ss_pag(pare_page_table, first_free_page+i);
   }
   set_cr3(get_DIR(current()));
   fill_struct->PID = ++PID_counter;
 
   int ebp;
-  get_ebp(ebp);
+  ebp = (int) get_ebp(ebp);
   ebp = ebp - ((int)current()); //Diferencia entre ESP i current del pare i despres li sumem al current del fill
 	ebp += (int)(fill_union); //ens posicionem on començen les dades del fill, que es el ESP del fill
 	fill_union->task.esp = ebp; 
@@ -97,10 +101,11 @@ int sys_fork()
   fill_union->stack[KERNEL_STACK_SIZE-NUM_PAG_DATA-2]=ret_from_fork;
 	fill_union->stack[KERNEL_STACK_SIZE-NUM_PAG_DATA-1]=ebp;
 
-  list_add(&(fill_union->task.list), &readyqueue);
+  list_add(&(fill_union->task.anchor), &ready_queue);
   return PID;
 }
 #define buff 512
+char sys_buffer[buff];
 int sys_write(int fd, char * buffer, int size)
 {
 	int ret;	
@@ -115,7 +120,7 @@ int sys_write(int fd, char * buffer, int size)
 
   //Copying data from user space to kernel space
   int bytes = size;
-  char sys_buffer[buff];
+  
   while(bytes > buff) {
 	copy_from_user(buffer,sys_buffer,size);
 	ret = sys_write_console(sys_buffer, buff);
@@ -137,13 +142,12 @@ return result;
 
 void sys_exit()
 {  
-  void sys_exit()
-{  
+
 	page_table_entry *page_table = get_PT(current());
 	for (int i = 0; i < NUM_PAG_DATA; i++) {
 		free_frame(get_frame(page_table, PAG_LOG_INIT_DATA+i));
 		del_ss_pag(page_table, PAG_LOG_INIT_DATA+i);
 	}
-	list_add_tail(&(current()->list), &freequeue);
+	list_add_tail(&(current()->anchor), &free_queue);
 	sched_next_rr();
 }

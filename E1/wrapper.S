@@ -20,8 +20,8 @@ retorn:
 	popl %edx
 	popl %ecx
 	popl %ebx
-	cmpl %eax, $0
-	jle errore // %eax < 0
+	test %eax, %eax
+	js errore // %eax < 0
 	//movl %ebp, %esp
 	popl %ebp
 	ret
@@ -102,6 +102,7 @@ ENTRY(exit)
 	pushl %ebp
 	movl %esp, %ebp
 	movl $1, %eax
-	call sys_exit
+	pushl %eax
+	sysenter
 	popl %ebp
 	ret
