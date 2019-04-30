@@ -74,7 +74,7 @@ int __attribute__((__section__(".text.main")))
 
   printk("Kernel Loaded!    ");
 
-
+  zeos_console_init();
   /* Initialize hardware data */
   setGdt(); /* Definicio de la taula de segments de memoria */
   setIdt(); /* Definicio del vector de interrupcions */
@@ -100,6 +100,7 @@ int __attribute__((__section__(".text.main")))
 
 
   printk("Entering user mode...");
+
 
   enable_int();
   /*
