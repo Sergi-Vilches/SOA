@@ -6,6 +6,7 @@
 #include <segment.h>
 #include <hardware.h>
 #include <io.h>
+#include <schedperf.h>
 
 #include <sched.h>
 
